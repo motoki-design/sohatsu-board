@@ -28,19 +28,6 @@ body{margin:0;background:var(--bg);color:var(--ink);
 a{color:var(--accent);text-decoration:none}
 a:hover{text-decoration:underline}
 
-/* ---- password gate ---- */
-#gate{position:fixed;inset:0;background:var(--bg);z-index:50;display:flex;
-  align-items:center;justify-content:center;flex-direction:column;gap:14px}
-#gate .box{background:var(--panel);border:1px solid var(--line);border-radius:14px;
-  padding:30px 34px;max-width:340px;width:90%;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.08)}
-#gate h1{font-size:16px;margin:0 0 4px}
-#gate p{color:var(--muted);font-size:12px;margin:0 0 16px}
-#gate input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;
-  background:var(--bg);color:var(--ink);font-size:15px;text-align:center}
-#gate button{margin-top:12px;width:100%;padding:10px;border:0;border-radius:8px;
-  background:var(--accent);color:#fff;font-size:14px;cursor:pointer}
-#gate .err{color:var(--over);font-size:12px;height:14px}
-
 .wrap{max-width:1200px;margin:0 auto;padding:18px 16px 60px}
 header.top{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:4px}
 header.top h1{font-size:19px;margin:0;letter-spacing:.02em}
@@ -111,17 +98,7 @@ header.top .sub{color:var(--muted);font-size:12px}
 </head>
 <body>
 
-<div id="gate">
-  <div class="box">
-    <h1>事業創発室 案件ダッシュボード</h1>
-    <p>閲覧パスワードを入力してください</p>
-    <input id="pw" type="password" autocomplete="off" placeholder="password">
-    <div class="err" id="pwerr"></div>
-    <button onclick="checkPw()">開く</button>
-  </div>
-</div>
-
-<div class="wrap" id="app" style="display:none">
+<div class="wrap" id="app">
   <header class="top">
     <h1>事業創発室 案件ダッシュボード</h1>
     <span class="sub">石田・勝部・竹下・守山（室長）</span>
@@ -143,23 +120,10 @@ header.top .sub{color:var(--muted);font-size:12px}
 </div>
 
 <script>
-const PW = "sohatsu2026"; // 閲覧パスワード（変更可）
 const SHEET = "1UAsSeukN3CUOGPlq-nNKR9Muxb7jj2CurkCv1gIJisI";
 const CSV = `https://docs.google.com/spreadsheets/d/${SHEET}/gviz/tq?tqx=out:csv&gid=0&range=A1:M200`;
 const TYPE_ORDER = ["進行業務","新規事業","企画・プロポ","協業検討","技術向上","仕組みづくり"];
 const ST_ORDER = ["結果待ち","相手ボール","進行中","保留","未着手","完了"];
-
-// ---- password gate ----
-function checkPw(){
-  const v=document.getElementById('pw').value;
-  if(v===PW){ sessionStorage.setItem('sohatsu_ok','1'); openApp(); }
-  else { document.getElementById('pwerr').textContent='パスワードが違います'; }
-}
-document.getElementById('pw').addEventListener('keydown',e=>{if(e.key==='Enter')checkPw();});
-function openApp(){ document.getElementById('gate').style.display='none';
-  document.getElementById('app').style.display='block'; load(); }
-if(sessionStorage.getItem('sohatsu_ok')==='1') openApp();
-else document.getElementById('pw').focus();
 
 // ---- CSV parse (quoted, escaped quotes, newlines in fields) ----
 function parseCSV(t){
@@ -310,6 +274,8 @@ function renderKpis(all){
   document.getElementById('kpis').innerHTML=K.map(k=>
     `<div class="kpi ${k.cls||''}"><div class="n">${k.n}</div><div class="l">${k.l}</div></div>`).join('');
 }
+
+load();
 </script>
 </body>
 </html>
