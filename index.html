@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>事業創発室 案件ダッシュボード</title>
+<style>
+:root{
+  --bg:#f4f6f8; --panel:#ffffff; --ink:#1f2a37; --muted:#6b7280; --line:#e5e8ec;
+  --accent:#557BA7; --accent2:#3f6690;
+  --s-run:#0f9d78; --s-runbg:#e6f6f0;
+  --s-wait:#c2410c; --s-waitbg:#fdeee3;
+  --s-ball:#2563eb; --s-ballbg:#e8eefe;
+  --s-hold:#6b7280; --s-holdbg:#eef0f2;
+  --s-done:#374151; --s-donebg:#e5e7eb;
+  --s-new:#9ca3af; --s-newbg:#f1f3f5;
+  --warn:#b45309; --warnbg:#fef3c7; --over:#b91c1c; --overbg:#fee2e2;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#12161c; --panel:#1a2029; --ink:#e6e9ee; --muted:#9aa4b2; --line:#2a323d;
+    --s-runbg:#0e2a22; --s-waitbg:#2e1c11; --s-ballbg:#152036; --s-holdbg:#232a33;
+    --s-donebg:#2a2f37; --s-newbg:#1f242c; --warnbg:#3a2e0c; --overbg:#3a1414; }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Segoe UI","Noto Sans JP",-apple-system,BlinkMacSystemFont,sans-serif;
+  font-size:14px;line-height:1.55}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ---- password gate ---- */
+#gate{position:fixed;inset:0;background:var(--bg);z-index:50;display:flex;
+  align-items:center;justify-content:center;flex-direction:column;gap:14px}
+#gate .box{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  padding:30px 34px;max-width:340px;width:90%;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.08)}
+#gate h1{font-size:16px;margin:0 0 4px}
+#gate p{color:var(--muted);font-size:12px;margin:0 0 16px}
+#gate input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;
+  background:var(--bg);color:var(--ink);font-size:15px;text-align:center}
+#gate button{margin-top:12px;width:100%;padding:10px;border:0;border-radius:8px;
+  background:var(--accent);color:#fff;font-size:14px;cursor:pointer}
+#gate .err{color:var(--over);font-size:12px;height:14px}
+
+.wrap{max-width:1200px;margin:0 auto;padding:18px 16px 60px}
+header.top{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:4px}
+header.top h1{font-size:19px;margin:0;letter-spacing:.02em}
+header.top .sub{color:var(--muted);font-size:12px}
+.meta{color:var(--muted);font-size:12px;margin-bottom:16px;display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.meta button{border:1px solid var(--line);background:var(--panel);color:var(--ink);
+  border-radius:7px;padding:4px 10px;font-size:12px;cursor:pointer}
+
+/* ---- KPI ---- */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:18px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.kpi .n{font-size:24px;font-weight:700;line-height:1.1}
+.kpi .l{font-size:11px;color:var(--muted);margin-top:2px}
+.kpi.alert .n{color:var(--over)}
+.kpi.warn .n{color:var(--warn)}
+
+/* ---- filters ---- */
+.filters{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  padding:12px 14px;margin-bottom:18px;display:flex;flex-direction:column;gap:10px}
+.frow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.frow .lab{font-size:11px;color:var(--muted);width:56px;flex:none}
+.chip{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;
+  padding:4px 12px;font-size:12px;cursor:pointer;user-select:none;transition:.12s}
+.chip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.frow input.search{flex:1;min-width:160px;padding:6px 12px;border:1px solid var(--line);
+  border-radius:8px;background:var(--bg);color:var(--ink);font-size:13px}
+
+/* ---- group ---- */
+.group{margin-bottom:22px}
+.group h2{font-size:13px;font-weight:700;color:var(--accent2);margin:0 0 10px;
+  padding-bottom:6px;border-bottom:2px solid var(--line);display:flex;gap:8px;align-items:center}
+.group h2 .cnt{color:var(--muted);font-weight:400;font-size:11px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;
+  display:flex;flex-direction:column;gap:8px;position:relative;overflow:hidden}
+.card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--s-new)}
+.card.st-進行中::before{background:var(--s-run)}
+.card.st-結果待ち::before{background:var(--s-wait)}
+.card.st-相手ボール::before{background:var(--s-ball)}
+.card.st-保留::before{background:var(--s-hold)}
+.card.st-完了::before{background:var(--s-done)}
+.card .ttl{font-weight:700;font-size:14.5px;line-height:1.4;padding-left:4px}
+.card .no{color:var(--muted);font-size:11px;font-weight:400;margin-left:6px}
+.badges{display:flex;gap:6px;flex-wrap:wrap;padding-left:4px}
+.badge{font-size:11px;padding:2px 9px;border-radius:999px;font-weight:600;white-space:nowrap}
+.b-type{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.b-st{color:#fff}
+.b-st.進行中{background:var(--s-run)} .b-st.結果待ち{background:var(--s-wait)}
+.b-st.相手ボール{background:var(--s-ball)} .b-st.保留{background:var(--s-hold)}
+.b-st.完了{background:var(--s-done)} .b-st.未着手{background:var(--s-new)}
+.row2{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);padding-left:4px}
+.row2 b{color:var(--ink);font-weight:600}
+.next{padding-left:4px;font-size:13px}
+.next .k{font-size:10px;color:var(--muted);display:block;letter-spacing:.04em}
+.deadline{display:inline-flex;align-items:center;gap:6px;padding-left:4px}
+.dl-pill{font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px}
+.dl-pill.soon{background:var(--warnbg);color:var(--warn)}
+.dl-pill.over{background:var(--overbg);color:var(--over)}
+.dl-pill.norm{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.recent{font-size:11.5px;color:var(--muted);padding-left:4px;border-top:1px dashed var(--line);padding-top:7px}
+.card .foot{display:flex;justify-content:space-between;align-items:center;padding-left:4px;
+  font-size:10.5px;color:var(--muted)}
+.card .foot a{font-size:11px}
+.empty{color:var(--muted);text-align:center;padding:40px;font-size:13px}
+.note{color:var(--muted);font-size:11px;margin-top:26px;text-align:center;line-height:1.7}
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="box">
+    <h1>事業創発室 案件ダッシュボード</h1>
+    <p>閲覧パスワードを入力してください</p>
+    <input id="pw" type="password" autocomplete="off" placeholder="password">
+    <div class="err" id="pwerr"></div>
+    <button onclick="checkPw()">開く</button>
+  </div>
+</div>
+
+<div class="wrap" id="app" style="display:none">
+  <header class="top">
+    <h1>事業創発室 案件ダッシュボード</h1>
+    <span class="sub">石田・勝部・竹下・守山（室長）</span>
+  </header>
+  <div class="meta">
+    <span id="updated">読み込み中…</span>
+    <button onclick="load()">↻ 更新</button>
+    <a href="https://docs.google.com/spreadsheets/d/1UAsSeukN3CUOGPlq-nNKR9Muxb7jj2CurkCv1gIJisI/edit" target="_blank">案件マスタを開く ↗</a>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+  <div class="filters" id="filters"></div>
+  <div id="board"></div>
+
+  <div class="note">
+    データは案件マスタ（Googleスプレッドシート）から自動取得。状態・次アクションの更新はマスタ側で。<br>
+    健康・人事等の機微情報は本ダッシュボードには掲載していません。
+  </div>
+</div>
+
+<script>
+const PW = "sohatsu2026"; // 閲覧パスワード（変更可）
+const SHEET = "1UAsSeukN3CUOGPlq-nNKR9Muxb7jj2CurkCv1gIJisI";
+const CSV = `https://docs.google.com/spreadsheets/d/${SHEET}/gviz/tq?tqx=out:csv&gid=0&range=A1:M200`;
+const TYPE_ORDER = ["進行業務","新規事業","企画・プロポ","協業検討","技術向上","仕組みづくり"];
+const ST_ORDER = ["結果待ち","相手ボール","進行中","保留","未着手","完了"];
+
+// ---- password gate ----
+function checkPw(){
+  const v=document.getElementById('pw').value;
+  if(v===PW){ sessionStorage.setItem('sohatsu_ok','1'); openApp(); }
+  else { document.getElementById('pwerr').textContent='パスワードが違います'; }
+}
+document.getElementById('pw').addEventListener('keydown',e=>{if(e.key==='Enter')checkPw();});
+function openApp(){ document.getElementById('gate').style.display='none';
+  document.getElementById('app').style.display='block'; load(); }
+if(sessionStorage.getItem('sohatsu_ok')==='1') openApp();
+else document.getElementById('pw').focus();
+
+// ---- CSV parse (quoted, escaped quotes, newlines in fields) ----
+function parseCSV(t){
+  const rows=[]; let row=[], f='', q=false;
+  for(let i=0;i<t.length;i++){ const c=t[i];
+    if(q){ if(c==='"'){ if(t[i+1]==='"'){f+='"';i++;} else q=false; } else f+=c; }
+    else { if(c==='"')q=true;
+      else if(c===','){row.push(f);f='';}
+      else if(c==='\n'){row.push(f);rows.push(row);row=[];f='';}
+      else if(c==='\r'){}
+      else f+=c; } }
+  if(f!==''||row.length){row.push(f);rows.push(row);}
+  return rows;
+}
+
+// ---- date parse for 期限 ----
+function daysLeft(txt){
+  if(!txt) return null;
+  const now=new Date(); now.setHours(0,0,0,0);
+  const y=now.getFullYear();
+  let m,d;
+  let mm=txt.match(/(\d{1,2})\s*[\/月]\s*(\d{1,2})/); // 7/6 · 7月6
+  if(mm){ m=+mm[1]; d=+mm[2]; }
+  else {
+    let mv=txt.match(/(\d{1,2})\s*月\s*(上旬|中旬|下旬)?/); // 8月上旬
+    if(mv){ m=+mv[1]; d=mv[2]==='上旬'?5:mv[2]==='下旬'?25:15; }
+    else return null;
+  }
+  let t=new Date(y,m-1,d);
+  if((t-now)/86400000 < -120) t=new Date(y+1,m-1,d); // 大きく過去なら翌年
+  return Math.round((t-now)/86400000);
+}
+
+let RAW=[], F={type:new Set(),owner:new Set(),st:new Set(),q:""};
+
+async function load(){
+  document.getElementById('updated').textContent='読み込み中…';
+  try{
+    const r=await fetch(CSV+"&_="+Date.now());
+    const rows=parseCSV(await r.text());
+    const head=rows[0]; const idx={};
+    head.forEach((h,i)=>idx[h.trim()]=i);
+    const g=(row,name)=> (idx[name]!=null && row[idx[name]]!=null)? row[idx[name]].trim():"";
+    RAW=rows.slice(1).filter(row=>g(row,"業務名")).map(row=>({
+      type:g(row,"種別"), no:g(row,"案件番号"), name:g(row,"業務名"),
+      owner:g(row,"主担当"), term:g(row,"工期"), memo:g(row,"備考"),
+      link:g(row,"関連リンク"), members:g(row,"関与メンバー"),
+      st:g(row,"状態")||"未着手", next:g(row,"次アクション"),
+      due:g(row,"期限"), recent:g(row,"直近の動き"), upd:g(row,"更新日"),
+    }));
+    const t=new Date();
+    document.getElementById('updated').textContent=
+      "最終取得 "+t.toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})+
+      "｜"+RAW.length+"件";
+    buildFilters(); render();
+  }catch(e){
+    document.getElementById('updated').textContent="取得失敗: "+e.message;
+  }
+}
+
+function buildFilters(){
+  const owners=[...new Set(RAW.map(r=>r.owner).filter(Boolean))];
+  const sts=[...new Set(RAW.map(r=>r.st))].sort((a,b)=>ST_ORDER.indexOf(a)-ST_ORDER.indexOf(b));
+  const el=document.getElementById('filters');
+  const chips=(arr,key)=>arr.map(v=>`<span class="chip ${F[key].has(v)?'on':''}" onclick="tog('${key}','${v.replace(/'/g,"")}')">${v}</span>`).join('');
+  el.innerHTML=`
+    <div class="frow"><span class="lab">種別</span>${chips(TYPE_ORDER.filter(t=>RAW.some(r=>r.type===t)),'type')}</div>
+    <div class="frow"><span class="lab">主担当</span>${chips(owners,'owner')}</div>
+    <div class="frow"><span class="lab">状態</span>${chips(sts,'st')}</div>
+    <div class="frow"><span class="lab">検索</span>
+      <input class="search" id="q" placeholder="業務名・次アクション・メンバー…" value="${F.q}"></div>`;
+  document.getElementById('q').addEventListener('input',e=>{F.q=e.target.value;render();});
+}
+function tog(key,v){ F[key].has(v)?F[key].delete(v):F[key].add(v);
+  document.querySelectorAll('.filters .chip').forEach(c=>{}); buildFilters(); render(); }
+
+function pass(r){
+  if(F.type.size && !F.type.has(r.type)) return false;
+  if(F.owner.size && !F.owner.has(r.owner)) return false;
+  if(F.st.size && !F.st.has(r.st)) return false;
+  if(F.q){ const q=F.q.toLowerCase();
+    if(!(r.name+r.next+r.members+r.recent+r.owner+r.no).toLowerCase().includes(q)) return false; }
+  return true;
+}
+
+function dueHtml(r){
+  if(!r.due) return "";
+  const dl=daysLeft(r.due);
+  let pill="";
+  if(dl!=null){
+    const cls= dl<0?'over': dl<=7?'soon':'norm';
+    const label= dl<0?`期限超過 ${-dl}日`: dl===0?'本日': `残${dl}日`;
+    pill=`<span class="dl-pill ${cls}">${label}</span>`;
+  }
+  return `<div class="deadline">${pill}<span style="font-size:12px">${esc(r.due)}</span></div>`;
+}
+function esc(s){return (s||"").replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function linkHtml(u){ if(!u) return "";
+  return /^https?:\/\//.test(u)? `<a href="${esc(u)}" target="_blank">関連リンク ↗</a>`:"" ; }
+
+function render(){
+  const board=document.getElementById('board');
+  const list=RAW.filter(pass);
+  renderKpis(RAW); // KPI は常に全体を集計
+  if(!list.length){ board.innerHTML='<div class="empty">該当する案件がありません</div>'; return; }
+  const byType={}; list.forEach(r=>{(byType[r.type]=byType[r.type]||[]).push(r);});
+  const order=[...TYPE_ORDER.filter(t=>byType[t]),...Object.keys(byType).filter(t=>!TYPE_ORDER.includes(t))];
+  board.innerHTML=order.map(t=>{
+    const items=byType[t].sort((a,b)=>{
+      const da=daysLeft(a.due), db=daysLeft(b.due);
+      if(da==null&&db==null) return 0; if(da==null) return 1; if(db==null) return -1; return da-db;
+    });
+    return `<div class="group"><h2>${t}<span class="cnt">${items.length}件</span></h2>
+      <div class="cards">${items.map(card).join('')}</div></div>`;
+  }).join('');
+}
+
+function card(r){
+  return `<div class="card st-${r.st}">
+    <div class="ttl">${esc(r.name)}<span class="no">${esc(r.no)}</span></div>
+    <div class="badges">
+      <span class="badge b-type">${esc(r.type)}</span>
+      <span class="badge b-st ${r.st}">${esc(r.st)}</span>
+    </div>
+    <div class="row2">
+      <span>主担当 <b>${esc(r.owner)||'—'}</b></span>
+      ${r.members?`<span>関与 <b>${esc(r.members)}</b></span>`:''}
+    </div>
+    ${r.next?`<div class="next"><span class="k">次アクション</span>${esc(r.next)}</div>`:''}
+    ${dueHtml(r)}
+    ${r.recent?`<div class="recent">${esc(r.recent)}</div>`:''}
+    <div class="foot"><span>${r.upd?'更新 '+esc(r.upd):''}</span>${linkHtml(r.link)}</div>
+  </div>`;
+}
+
+function renderKpis(all){
+  const cnt=s=>all.filter(r=>r.st===s).length;
+  const soon=all.filter(r=>{const d=daysLeft(r.due);return d!=null&&d>=0&&d<=7;}).length;
+  const over=all.filter(r=>{const d=daysLeft(r.due);return d!=null&&d<0;}).length;
+  const K=[
+    {n:all.length,l:'案件 合計'},
+    {n:cnt('進行中'),l:'進行中'},
+    {n:cnt('結果待ち'),l:'結果待ち'},
+    {n:cnt('相手ボール'),l:'相手ボール',cls: cnt('相手ボール')?'warn':''},
+    {n:soon,l:'期限7日以内',cls: soon?'warn':''},
+    {n:over,l:'期限超過',cls: over?'alert':''},
+  ];
+  document.getElementById('kpis').innerHTML=K.map(k=>
+    `<div class="kpi ${k.cls||''}"><div class="n">${k.n}</div><div class="l">${k.l}</div></div>`).join('');
+}
+</script>
+</body>
+</html>
